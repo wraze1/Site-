@@ -1,0 +1,12 @@
+{
+  "name": "journalist-editor",
+  "version": "1.0.0",
+  "description": "Editorial correction tool for journalistic texts",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Редактор текстов</title>
+  <style>
+    :root {
+      --bg: #f5f2eb;
+      --surface: #ffffff;
+      --surface2: #f9f7f3;
+      --border: #ddd8cc;
+      --text: #1a1814;
+      --muted: #7a7060;
+      --red: #c0392b;
+      --red-hover: #a93226;
+      --shadow: 0 2px 12px rgba(0,0,0,0.06);
+      --shadow-lg: 0 10px 36px rgba(0,0,0,0.16);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Georgia, 'Times New Roman', serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 13px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .logo-icon {
+      width: 28px; height: 28px;
+      background: var(--red);
+      border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .logo-icon svg { width: 15px; height: 15px; fill: white; }
+
+    .logo h1 {
+      font-size: 15px;
+      font-weight: 400;
+    }
+
+    .logo h1 small {
+      display: block;
+      font-size: 11px;
+      color: var(--muted);
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    .key-btn {
+      background: none;
+      border: 1px solid var(--border);
+      padding: 6px 11px;
+      border-radius: 6px;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 11px;
+      color: var(--muted);
+      cursor: pointer;
+      display: flex; align-items: center; gap: 5px;
+      transition: all 0.15s;
+    }
+
+    .key-btn:hover { border-color: var(--red); color: var(--red); }
+
+    .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #ccc;
+      transition: background 0.2s;
+    }
+
+    .dot.on { background: #27ae60; }
+
+    /* ── Main ── */
+    .wrap {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 22px 14px 80px;
+    }
+
+    /* ── Editor card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card-top {
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 14px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .label {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 1.3px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .counter {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 185px;
+      padding: 18px;
+      border: none; outline: none;
+      resize: vertical;
+      font-family: Georgia, serif;
+      font-size: 16px;
+      line-height: 1.72;
+      color: var(--text);
+      background: transparent;
+    }
+
+    textarea::placeholder { color: #bdb5a6; }
+
+    .card-bot {
+      border-top: 1px solid var(--border);
+      padding: 10px 14px;
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    }
+
+    .hint-txt {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .check-btn {
+      background: var(--red);
+      color: white;
+      border: none;
+      padding: 9px 20px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      cursor: pointer;
+      font-weight: 500;
+      display: flex; align-items: center; gap: 7px;
+      min-width: 120px; justify-content: center;
+      transition: background 0.15s;
+    }
+
+    .check-btn:hover:not(:disabled) { background: var(--red-hover); }
+    .check-btn:disabled { background: #c8bfb0; cursor: default; }
+
+    .spin {
+      width: 13px; height: 13px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: rot 0.7s linear infinite;
+      display: none;
+    }
+
+    .check-btn.busy .spin { display: block; }
+    .check-btn.busy .btn-lbl { display: none; }
+
+    @keyframes rot { to { transform: rotate(360deg); } }
+
+    /* ── Results ── */
+    .results { display: none; margin-top: 20px; }
+    .results.show { display: block; }
+
+    .section-hd {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 1.3px;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 9px;
+    }
+
+    /* Summary */
+    .summary-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--red);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .editor-row {
+      display: flex; align-items: center; gap: 9px;
+      margin-bottom: 8px;
+    }
+
+    .ava {
+      width: 30px; height: 30px;
+      background: #2c3e50;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; color: white;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .ava-info { line-height: 1.3; }
+    .ava-name { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 12px; font-weight: 600; }
+    .ava-role { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 10px; color: var(--muted); }
+
+    .summary-text { font-size: 15px; line-height: 1.65; font-style: italic; }
+
+    /* Stats */
+    .stats { display: flex; gap: 7px; margin-bottom: 14px; flex-wrap: wrap; }
+
+    .chip {
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .chip-total { background: #f0ece6; border-color: #ccc; color: #666; }
+    .chip-crit { background: #ffeaea; border-color: #e74c3c; color: #c0392b; }
+    .chip-imp { background: #fff3e0; border-color: #f39c12; color: #d35400; }
+    .chip-min { background: #f0f7f0; border-color: #27ae60; color: #1e8449; }
+
+    /* Correction items */
+    .c-list { display: flex; flex-direction: column; gap: 9px; }
+
+    .c-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .c-head {
+      padding: 11px 14px;
+      display: flex; align-items: flex-start; gap: 9px;
+    }
+
+    .badge {
+      flex-shrink: 0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 3px;
+    }
+
+    .badge-o { background: #ffe0e0; color: #c0392b; }
+    .badge-p { background: #fff0d0; color: #d35400; }
+    .badge-r { background: #e8f0ff; color: #2471a3; }
+    .badge-s { background: #f0e8ff; color: #7d3c98; }
+
+    .c-body { flex: 1; min-width: 0; }
+
+    .cmp { display: flex; flex-direction: column; gap: 4px; margin-bottom: 5px; }
+
+    .crow {
+      display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap;
+    }
+
+    .clbl {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      width: 40px;
+      flex-shrink: 0;
+    }
+
+    .cold { font-size: 15px; color: #c0392b; text-decoration: line-through; text-decoration-color: rgba(192,57,43,0.4); word-break: break-word; }
+    .cnew { font-size: 15px; color: #1a7a40; font-weight: 500; word-break: break-word; }
+
+    .c-comment {
+      padding: 8px 14px 12px;
+      font-size: 13px;
+      line-height: 1.55;
+      color: #4a4440;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      border-top: 1px solid #f0ece4;
+    }
+
+    .sev-bar { height: 3px; }
+    .sev-crit { background: #e74c3c; }
+    .sev-imp { background: #f39c12; }
+    .sev-min { background: #27ae60; }
+
+    .no-err {
+      background: var(--surface);
+      border: 1px solid #a9dfbf;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .no-err .icon { font-size: 26px; margin-bottom: 5px; }
+    .no-err p { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1e8449; font-size: 14px; }
+
+    /* Error notice */
+    .err-msg {
+      background: #fff5f5;
+      border: 1px solid #f5c6cb;
+      border-radius: 8px;
+      padding: 13px 16px;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 13px;
+      color: #721c24;
+      margin-top: 12px;
+      display: none;
+    }
+
+    .err-msg.show { display: block; }
+
+    /* ── Modal ── */
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(15,12,8,0.6);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .overlay.show { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 26px 22px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .modal h2 { font-size: 18px; font-weight: 400; margin-bottom: 5px; }
+
+    .modal-desc {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.55;
+      margin-bottom: 16px;
+    }
+
+    .modal-desc a { color: var(--red); text-decoration: none; }
+
+    .notice {
+      background: #fff9ef;
+      border: 1px solid #f5deb3;
+      border-radius: 7px;
+      padding: 10px 13px;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 12px;
+      color: #6b4c1e;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+
+    .f-label {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+      font-weight: 700;
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .f-input {
+      width: 100%;
+      padding: 9px 11px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+      background: var(--surface2);
+      transition: border-color 0.15s;
+    }
+
+    .f-input:focus { border-color: var(--red); }
+
+    .show-toggle {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 11px;
+      color: var(--muted);
+      cursor: pointer;
+      text-decoration: underline;
+      text-align: right;
+      display: block;
+      margin: 5px 0 16px;
+    }
+
+    .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+
+    .btn-cancel {
+      background: none;
+      border: 1px solid var(--border);
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 13px;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .btn-save {
+      background: var(--red);
+      color: white;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .btn-save:hover { background: var(--red-hover); }
+
+    @media (max-width: 580px) {
+      .wrap { padding: 14px 11px 70px; }
+      textarea { font-size: 15px; min-height: 150px; padding: 15px; }
+      .card-bot { gap: 8px; }
+      .check-btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2>API ключ Anthropic</h2>
+    <p class="modal-desc">
+      Получите ключ на <a href="https://console.anthropic.com/keys" target="_blank">console.anthropic.com</a>.
+      Он хранится только в вашем браузере.
+    </p>
+    <div class="notice">
+      Ключ сохраняется на этом устройстве и не передаётся никому, кроме Anthropic.
+    </div>
+    <label class="f-label">Ваш API ключ</label>
+    <input class="f-input" type="password" id="keyInp" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
+    <span class="show-toggle" id="showTgl" onclick="toggleVis()">Показать</span>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Отмена</button>
+      <button class="btn-save" onclick="saveKey()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+    </div>
+    <h1>Редактор текстов <small>Журналистская правка</small></h1>
+  </div>
+  <button class="key-btn" onclick="openModal()">
+    <span class="dot" id="dot"></span>
+    API ключ
+  </button>
+</header>
+
+<div class="wrap">
+  <div class="card">
+    <div class="card-top">
+      <span class="label">Исходный текст</span>
+      <span class="counter" id="cnt">0 символов</span>
+    </div>
+    <textarea id="txt" placeholder="Вставьте журналистский текст — статья, репортаж, заметка..." spellcheck="false"></textarea>
+    <div class="card-bot">
+      <span class="hint-txt">Ctrl+Enter — быстрая проверка</span>
+      <button class="check-btn" id="checkBtn" onclick="doCheck()">
+        <div class="spin"></div>
+        <span class="btn-lbl">Проверить</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="err-msg" id="errMsg"></div>
+
+  <div class="results" id="results">
+    <p class="section-hd">Редакторский комментарий</p>
+    <div class="summary-card">
+      <div class="editor-row">
+        <div class="ava">РД</div>
+        <div class="ava-info">
+          <div class="ava-name">Редактор</div>
+          <div class="ava-role">Литературная правка</div>
+        </div>
+      </div>
+      <p class="summary-text" id="sumTxt"></p>
+    </div>
+
+    <div id="corrWrap">
+      <div class="stats" id="stats"></div>
+      <p class="section-hd" id="corrHd">Найденные ошибки</p>
+      <div class="c-list" id="cList"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const txt = $('txt'), cnt = $('cnt'), checkBtn = $('checkBtn');
+  const results = $('results'), errMsg = $('errMsg'), dot = $('dot');
+
+  const getKey = () => { try { return localStorage.getItem('_akey') || ''; } catch { return ''; } };
+  const setKey = k => { try { localStorage.setItem('_akey', k); } catch {} };
+
+  function refreshDot() { dot.classList.toggle('on', !!getKey()); }
+  refreshDot();
+  if (!getKey()) setTimeout(openModal, 350);
+
+  txt.addEventListener('input', () => {
+    const n = txt.value.length;
+    cnt.textContent = `${n} ${pl(n, 'символ', 'символа', 'символов')}`;
+  });
+
+  function pl(n, a, b, c) {
+    const m10 = n % 10, m100 = n % 100;
+    if (m100 >= 11 && m100 <= 19) return c;
+    if (m10 === 1) return a;
+    if (m10 >= 2 && m10 <= 4) return b;
+    return c;
+  }
+
+  const SYSTEM = `Ты опытный литературный редактор журнала с 15-летним стажем. Редактируешь журналистские тексты вдумчиво, с живым чутьём — замечаешь не только грамматику, но и интонацию, ритм фразы, уместность слова.
+
+Найди и исправь ошибки: орфографические, пунктуационные, речевые, стилистические.
+
+Верни ТОЛЬКО JSON (без markdown, без обёрток):
+{"corrections":[{"original":"точный фрагмент оригинала","corrected":"исправленный вариант","type":"орфографическая"|"пунктуационная"|"речевая"|"стилистическая","comment":"живой редакторский комментарий — почему неверно и как лучше, без канцелярщины","severity":"критическая"|"важная"|"незначительная"}],"summary":"общий комментарий редактора, 1-3 предложения"}
+
+Правила для комментариев: пиши как живой человек — "Здесь нет запятой — придаточное оторвано от главного", а не "Необходимо добавить знак препинания". Можешь выражать лёгкое мнение: "режет слух", "читатель споткнётся". Если ошибок нет — пустой массив и честный короткий отзыв. Текст < 10 слов → {"corrections":[],"summary":"Слишком короткий фрагмент."}`;
+
+  async function doCheck() {
+    const text = txt.value.trim();
+    if (!text) return;
+
+    const key = getKey();
+    if (!key) { openModal(); return; }
+
+    setBusy(true);
+    hideErr();
+    results.classList.remove('show');
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 4096,
+          system: SYSTEM,
+          messages: [{ role: 'user', content: `Отредактируй этот журналистский текст:\n\n${text}` }]
+        })
+      });
+
+      if (res.status === 401) {
+        showErr('Неверный API ключ. Проверьте и обновите в настройках.');
+        openModal();
+        return;
+      }
+
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        showErr(d.error?.message || `Ошибка API: ${res.status}`);
+        return;
+      }
+
+      const data = await res.json();
+      const raw = data.content?.[0]?.text?.trim() || '';
+
+      let parsed;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        const m = raw.match(/\{[\s\S]*\}/);
+        parsed = m ? JSON.parse(m[0]) : null;
+      }
+
+      if (!parsed) { showErr('Не удалось разобрать ответ. Попробуйте ещё раз.'); return; }
+
+      render(parsed);
+    } catch (e) {
+      showErr('Ошибка сети. Проверьте подключение к интернету.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function render({ corrections, summary }) {
+    $('sumTxt').textContent = summary || '';
+
+    const cList = $('cList'), stats = $('stats'), corrHd = $('corrHd');
+    cList.innerHTML = '';
+    stats.innerHTML = '';
+
+    if (!corrections || corrections.length === 0) {
+      corrHd.style.display = 'none';
+      stats.style.display = 'none';
+      cList.innerHTML = `<div class="no-err"><div class="icon">✓</div><p>Ошибок не найдено — текст написан грамотно</p></div>`;
+      results.classList.add('show');
+      results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+
+    corrHd.style.display = '';
+    stats.style.display = '';
+
+    const crit = corrections.filter(c => c.severity === 'критическая').length;
+    const imp = corrections.filter(c => c.severity === 'важная').length;
+    const min = corrections.filter(c => c.severity === 'незначительная').length;
+
+    stats.innerHTML = [
+      `<span class="chip chip-total">Всего: ${corrections.length}</span>`,
+      crit ? `<span class="chip chip-crit">⚠ Критических: ${crit}</span>` : '',
+      imp ? `<span class="chip chip-imp">! Важных: ${imp}</span>` : '',
+      min ? `<span class="chip chip-min">· Незначительных: ${min}</span>` : '',
+    ].join('');
+
+    const tMap = {
+      'орфографическая': ['badge-o', 'Орфография'],
+      'пунктуационная':  ['badge-p', 'Пунктуация'],
+      'речевая':         ['badge-r', 'Речевая'],
+      'стилистическая':  ['badge-s', 'Стиль'],
+    };
+
+    const sMap = { 'критическая': 'sev-crit', 'важная': 'sev-imp', 'незначительная': 'sev-min' };
+
+    corrections.forEach(c => {
+      const [bc, bl] = tMap[c.type] || ['badge-s', c.type];
+      const sc = sMap[c.severity] || 'sev-min';
+      const el = document.createElement('div');
+      el.className = 'c-item';
+      el.innerHTML = `
+        <div class="c-head">
+          <span class="badge ${bc}">${bl}</span>
+          <div class="c-body">
+            <div class="cmp">
+              <div class="crow"><span class="clbl">Было</span><span class="cold">${esc(c.original)}</span></div>
+              <div class="crow"><span class="clbl">Стало</span><span class="cnew">${esc(c.corrected)}</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="c-comment">${esc(c.comment)}</div>
+        <div class="sev-bar ${sc}"></div>`;
+      cList.appendChild(el);
+    });
+
+    results.classList.add('show');
+    results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function setBusy(on) {
+    checkBtn.disabled = on;
+    checkBtn.classList.toggle('busy', on);
+  }
+
+  function showErr(m) { errMsg.textContent = m; errMsg.classList.add('show'); }
+  function hideErr() { errMsg.classList.remove('show'); }
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  txt.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') doCheck(); });
+
+  // Modal
+  function openModal() {
+    $('keyInp').value = getKey();
+    $('keyInp').type = 'password';
+    $('showTgl').textContent = 'Показать';
+    $('overlay').classList.add('show');
+    setTimeout(() => $('keyInp').focus(), 80);
+  }
+
+  function closeModal() { $('overlay').classList.remove('show'); }
+
+  function saveKey() {
+    const k = $('keyInp').value.trim();
+    if (!k) return;
+    setKey(k);
+    refreshDot();
+    closeModal();
+  }
+
+  function toggleVis() {
+    const inp = $('keyInp'), tgl = $('showTgl');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+    tgl.textContent = inp.type === 'password' ? 'Показать' : 'Скрыть';
+  }
+
+  $('keyInp').addEventListener('keydown', e => { if (e.key === 'Enter') saveKey(); });
+  $('overlay').addEventListener('click', e => { if (e.target === $('overlay')) closeModal(); });
+</script>
+</body>
+</html>
